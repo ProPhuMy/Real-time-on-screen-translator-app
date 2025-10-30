@@ -5,10 +5,6 @@ import gui
 from gui import select_region
 import time
 import keyboard
-import threading
-
-global uptime
-uptime = True
 
 def on_hotkey():
     global coords
@@ -25,9 +21,8 @@ def on_hotkey():
 keyboard.add_hotkey('ctrl+l', on_hotkey)  
 
 if __name__ == "__main__":
-    global coords
     coords = select_region()
-    while uptime:
+    while True:
         while gui.running and coords:
             time.sleep(2)
             print("Taking screenshot...")
