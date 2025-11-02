@@ -5,7 +5,10 @@ import gui
 from gui import select_region
 import time
 import keyboard
+import easyocr
 
+global count
+count = 0 
 def on_hotkey():
     global coords
     gui.running = False
@@ -16,13 +19,13 @@ def on_hotkey():
     if coords:
         print(f"New region selected: {coords}")
     else:
-        print("No region selected. Exiting...")
+        print("No region selected. Exiting")
 
 keyboard.add_hotkey('ctrl+l', on_hotkey)  
 
 def take_image(coords):
     x, y, w, h = coords
-    image = pyautogui.screenshot(x,y,w,h)
+    image = pyautogui.screenshot(region=(x,y,w,h))
     return image
 
 def convert_image(image):
@@ -30,16 +33,32 @@ def convert_image(image):
     return img
 
 #return true if image has changed, else return false
-def compare_images(img1, img2, threshold=5000):
-    # Ensure the images have the same size
-    assert img1.shape == img2.shape, "Images must be the same size."
-    
-    # Calculate the MSE between the images
+def compare_images(img1, img2, threshold=5000):    
+    #calculate MSE
     err = np.sum((img1.astype("float") - img2.astype("float")) ** 2)
     err /= float(img1.shape[0] * img2.shape[1])
     if err > threshold:
+        global count
+        count = 0
         return True
     return False
+
+class OCR:
+    def __init__(self, langlist = ['ja', 'en']):
+        self.reader = easyocr.Reader(langlist)
+    
+    #too lazy to implement manual reset at the moment, will implement later if want :)
+    def reset(self):
+        global count
+        count = 0
+
+    def extract_text(self, img):
+        global count
+        if count != 0:
+            return None
+        result = self.reader.readtext(img)
+        count += 1
+        return result
 
 if __name__ == "__main__":
     coords = select_region()
@@ -50,7 +69,7 @@ if __name__ == "__main__":
             time.sleep(2)
             img2 = convert_image(take_image(coords))
             if (compare_images(img1, img2)):
-                
+                print("yeah baby")
         time.sleep(0.1)
         if coords is None:
             break
