@@ -1,4 +1,6 @@
 .venv/
 __pycache__/
 .env
-test.py
+test2.py
+test1.py
+text3.py
