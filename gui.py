@@ -3,6 +3,8 @@ import tkinter as tk
 from tkinter import ttk
 global running
 running = False
+global has_exit
+has_exit = False
 
 if sys.platform.startswith("win"):
     try:
@@ -78,6 +80,8 @@ class SnippingToolGUI:
         self.root.quit()
     
     def on_close(self):
+        global has_exit
+        has_exit = True
         self.result = None
         self.root.quit()
 

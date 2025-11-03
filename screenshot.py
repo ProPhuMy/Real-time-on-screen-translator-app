@@ -12,7 +12,7 @@ count = 0
 def on_hotkey():
     global coords
     gui.running = False
-    print("\nCtrl+L pressed! Stopping screenshot monitoring...")
+    print("\nCtrl+L pressed. Stopping screenshot monitoring...")
     print("Opening region selector...")
     time.sleep(0.5)  
     coords = select_region()
