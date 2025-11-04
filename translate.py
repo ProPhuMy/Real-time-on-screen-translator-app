@@ -44,4 +44,8 @@ def translate_text(result: list):
         translated_text = translated_text.split()
     else:
         print('failed to get response from api')
-    return [(box, string) for box, string in zip(bbox, translated_text)]
+
+    try:
+        return [(box, string) for box, string in zip(bbox, translated_text)]
+    except UnboundLocalError:
+        return None

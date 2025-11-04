@@ -33,7 +33,7 @@ def convert_image(image):
     return img
 
 #return true if image has changed, else return false
-def compare_images(img1, img2, threshold=5000):    
+def compare_images(img1, img2, threshold=1000):    
     #calculate MSE
     err = np.sum((img1.astype("float") - img2.astype("float")) ** 2)
     err /= float(img1.shape[0] * img2.shape[1])
