@@ -7,8 +7,6 @@ import time
 import keyboard
 import easyocr
 
-global count
-count = 0 
 def on_hotkey():
     global coords
     gui.running = False
@@ -38,8 +36,6 @@ def compare_images(img1, img2, threshold=1000):
     err = np.sum((img1.astype("float") - img2.astype("float")) ** 2)
     err /= float(img1.shape[0] * img2.shape[1])
     if err > threshold:
-        global count
-        count = 0
         return True
     return False
 
@@ -47,17 +43,8 @@ class OCR:
     def __init__(self, langlist = ['ja', 'en']):
         self.reader = easyocr.Reader(langlist)
     
-    #too lazy to implement manual reset at the moment, will implement later if want :)
-    def reset(self):
-        global count
-        count = 0
-
     def extract_text(self, img):
-        global count
-        if count != 0:
-            return None
         result = self.reader.readtext(img)
-        count += 1
         return result
 
 if __name__ == "__main__":

@@ -28,7 +28,7 @@ def translate_text(result: list):
   }
 
     data={
-    "model": "cognitivecomputations/dolphin-mistral-24b-venice-edition:free", 
+    "model": "mistralai/mistral-7b-instruct:free", 
     "messages": [
       {
         "role": "user",
@@ -42,6 +42,7 @@ def translate_text(result: list):
         result = response.json()
         translated_text = result['choices'][0]['message']['content']
         translated_text = translated_text.split()
+        print('translation sucessful')
     else:
         print('failed to get response from api')
 

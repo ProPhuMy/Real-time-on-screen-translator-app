@@ -52,4 +52,4 @@ class TransparentFramelessWindow(QWidget):
     def reset_labels(self):
         for child in self.findChildren(QLabel):
             child.setParent(None)
-            child.deleteLater
+            child.deleteLater()
