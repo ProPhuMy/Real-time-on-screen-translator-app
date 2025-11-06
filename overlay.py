@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel
 from PyQt5.QtGui import QFont
 from gui import select_region
@@ -10,8 +10,9 @@ class TransparentFramelessWindow(QWidget):
         self.setWindowTitle('I need your love')
         self.x1, self.y1, self.width1, self.height1 = coords
         self.setGeometry(self.x1, self.y1 , self.width1, self.height1)
-        self.setWindowFlags(Qt.FramelessWindowHint)
-        self.setWindowOpacity(1)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        # self.setWindowOpacity(0.3)
     
     def convert_bbox_to_xywh(self, bbox: list):
         # the list returned from easyocr is in the format:
@@ -19,34 +20,36 @@ class TransparentFramelessWindow(QWidget):
         # we only want to extract the first and last item from the 2d array to get xywh
         x, y =  bbox[0]
         placeholder_x , placeholder_y = bbox[2]
-        return x, y, abs(placeholder_x-x), abs(y - placeholder_y)
+
+        x = int(x)
+        y = int(y)
+        placeholder_x = int(placeholder_x)
+        placeholder_y = int(placeholder_y)
+
+        width = abs(placeholder_x-x)
+        height = abs(y - placeholder_y)
+
+        # padding = max(10, int(height * 0.15))
+        # x = x - padding
+        # y = y - padding
+        # width = width + (padding * 2)
+        # height = height + (padding * 2)
+        return x, y, width , height
     
     def create_labels(self, bbox_and_text_list: list):
         for bbox_and_text_tuple in bbox_and_text_list:
             x, y, width, height = self.convert_bbox_to_xywh(bbox_and_text_tuple[0])
-            text_size = height * 0.7
             label = QLabel(bbox_and_text_tuple[1], self)
             label.setGeometry(x, y, width, height)
             label.setStyleSheet("background-color: white;")
-            label.setMargin(5)
             label.setWordWrap(True)
             label.setAlignment(Qt.AlignCenter)
-            font = QFont('Arial', text_size)
+            font = QFont('Arial')
             font.setBold(True)
             label.setFont(font)
-    
+            label.show()
+           
     def reset_labels(self):
         for child in self.findChildren(QLabel):
-            child.deleteLater()
-
-def main():
-    app = QApplication(sys.argv)
-    coords = select_region()
-    if coords:
-        x, y, w, h = coords
-        win = TransparentFramelessWindow(x, y , w, h)
-        win.create_labels()
-        win.show()
-        sys.exit(app.exec())
-if __name__ == "__main__":
-    main()
+            child.setParent(None)
+            child.deleteLater
