@@ -1,11 +1,6 @@
-import requests
-import json
-import screenshot as sc
 from dotenv import load_dotenv
-import os
-
-load_dotenv()
-OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+from google import genai
+from google.genai import types
 
 def unpack_text_and_bbox(result: list):
     placeholder = [(bbox, text) for bbox, text, _ in result]
@@ -17,36 +12,22 @@ def process_text_for_api(text_to_translate : list):
     text_for_translation = '\n'.join(text_to_translate)
     return text_for_translation
 
-def translate_text(result: list):
+def translate_text(result: list, client) -> list[tuple] | None:
     bbox, preproccessed_text = unpack_text_and_bbox(result)
     text = process_text_for_api(preproccessed_text)
-
-    url="https://openrouter.ai/api/v1/chat/completions"
-    headers={
-    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-    "Content-Type": "application/json"
-  }
-
-    data={
-    "model": "mistralai/mistral-7b-instruct:free", 
-    "messages": [
-      {
-        "role": "user",
-        "content": f"Translate this Japanese text to English. Provide only the translation, no explanations:\n\n{text}"
-      }
-    ]
-  }
     
-    response = requests.post(url, json=data, headers=headers)
-    if response.status_code == 200:
-        result = response.json()
-        translated_text = result['choices'][0]['message']['content']
-        translated_text = translated_text.split()
-        print('translation sucessful')
-    else:
-        print('failed to get response from api')
+    response = client.models.generate_content(
+        model = "gemini-2.5-flash",
+        config=types.GenerateContentConfig(
+            system_instruction="Translate the following Japanese text into natural English while keeping the nuances of native Japanese. Do not add explanations, notes, interpretations, or context. If the text is ambiguous, translate it literally and directly. Output only the translation and nothing else."
+        ),
+        contents = text
+    )
+    translated_text = response.text.split('\n')
 
     try:
         return [(box, string) for box, string in zip(bbox, translated_text)]
-    except UnboundLocalError:
+    except Exception:
         return None
+    
+
