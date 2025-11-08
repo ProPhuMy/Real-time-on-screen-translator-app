@@ -6,6 +6,7 @@ from gui import select_region
 import time
 import keyboard
 import easyocr
+from PIL import Image
 
 def on_hotkey():
     global coords
@@ -13,11 +14,6 @@ def on_hotkey():
     print("\nCtrl+L pressed. Stopping screenshot monitoring...")
     print("Opening region selector...")
     time.sleep(0.5)  
-    coords = select_region()
-    if coords:
-        print(f"New region selected: {coords}")
-    else:
-        print("No region selected. Exiting")
 
 keyboard.add_hotkey('ctrl+l', on_hotkey)  
 
@@ -49,14 +45,18 @@ class OCR:
 
 if __name__ == "__main__":
     coords = select_region()
-    while True:
-        while gui.running and coords:
-            print("Taking screenshot...")
-            img1 = convert_image(take_image(coords))
-            time.sleep(2)
-            img2 = convert_image(take_image(coords))
-            if (compare_images(img1, img2)):
-                print("yeah baby")
-        time.sleep(0.1)
-        if coords is None:
-            break
+    img = take_image(coords)
+    img = convert_image(img)
+    image = Image.fromarray(img)
+    image.show()
+    # while True:
+    #     while gui.running and coords:
+    #         print("Taking screenshot...")
+    #         img1 = convert_image(take_image(coords))
+    #         time.sleep(2)
+    #         img2 = convert_image(take_image(coords))
+    #         if (compare_images(img1, img2)):
+    #             print("yeah baby")
+    #     time.sleep(0.1)
+    #     if coords is None:
+    #         break

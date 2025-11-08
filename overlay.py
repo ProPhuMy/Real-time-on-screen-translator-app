@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QWidget, QApplication, QLabel
+from PyQt5.QtWidgets import QWidget, QLabel
 from PyQt5.QtGui import QFont
 from gui import select_region
 
@@ -50,6 +50,8 @@ class TransparentFramelessWindow(QWidget):
             label.show()
            
     def reset_labels(self):
+        from PyQt5.QtWidgets import QApplication
         for child in self.findChildren(QLabel):
             child.setParent(None)
             child.deleteLater()
+        QApplication.processEvents()  # Force Qt to process deletions immediately
