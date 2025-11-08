@@ -1,19 +1,28 @@
-import gui
-from gui import select_region
 import screenshot as sc
 from screenshot import OCR
 import translate as ts
+import gui_pyqt as gui
+from gui_pyqt import select_region
 from overlay import TransparentFramelessWindow
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QTimer
 import sys
 from google import genai
+import keyboard
 
 overlay = None
 reader = None
 client = None
 previous_img = None
 coords = None
+
+def on_hotkey():
+    global coords
+    gui.running = False
+    print("\nCtrl+L pressed. Stopping screenshot monitoring...")
+    print("Opening region selector...")
+
+keyboard.add_hotkey('ctrl+l', on_hotkey)  
 
 
 def take_screenshot_and_translate():
@@ -26,13 +35,14 @@ def take_screenshot_and_translate():
     if not gui.running:
         timer.stop()
         handle_region_change()
+        print("bro")
         if coords is not None:
             timer.start(2000)
+            QApplication.processEvents()  # Force PyQt event loop to resume after Tkinter interference
+            print(f"ass - timer is active: {timer.isActive()}")
+        print("faf")
         return
     
-    if gui.has_exit:
-        app.quit()
-        return
     
     try:
         # Hide overlay before screenshot

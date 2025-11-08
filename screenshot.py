@@ -1,21 +1,8 @@
 import numpy as np
 import cv2
 import pyautogui
-import gui
-from gui import select_region
 import time
-import keyboard
 import easyocr
-from PIL import Image
-
-def on_hotkey():
-    global coords
-    gui.running = False
-    print("\nCtrl+L pressed. Stopping screenshot monitoring...")
-    print("Opening region selector...")
-    time.sleep(0.5)  
-
-keyboard.add_hotkey('ctrl+l', on_hotkey)  
 
 def take_image(coords):
     x, y, w, h = coords
@@ -43,20 +30,3 @@ class OCR:
         result = self.reader.readtext(img)
         return result
 
-if __name__ == "__main__":
-    coords = select_region()
-    img = take_image(coords)
-    img = convert_image(img)
-    image = Image.fromarray(img)
-    image.show()
-    # while True:
-    #     while gui.running and coords:
-    #         print("Taking screenshot...")
-    #         img1 = convert_image(take_image(coords))
-    #         time.sleep(2)
-    #         img2 = convert_image(take_image(coords))
-    #         if (compare_images(img1, img2)):
-    #             print("yeah baby")
-    #     time.sleep(0.1)
-    #     if coords is None:
-    #         break
