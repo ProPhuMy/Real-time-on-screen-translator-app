@@ -102,7 +102,7 @@ class SnippingToolGUI(QtWidgets.QWidget):
         self.result = None
 
         self.setWindowTitle("Screen Region Selector")
-        self.setFixedSize(400, 250)
+        self.setFixedSize(300, 200)
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
 
         # Center the window on the primary screen
