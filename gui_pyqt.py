@@ -1,6 +1,5 @@
 import sys
 
-# Try to set Windows DPI awareness
 if sys.platform.startswith("win"):
     try:
         import ctypes
@@ -23,16 +22,13 @@ class RegionSelectorDialog(QtWidgets.QDialog):
         )
         self.setModal(True)
 
-        # We'll cover the primary screen full-screen (like Tkinter fullscreen)
         self.showFullScreen()
 
-        # Use translucent background and manual painting so we can draw a semi-opaque overlay
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
 
-        # Cursor
         self.setCursor(QtCore.Qt.CrossCursor)
 
-        # Selection state
+        # setting election state
         self._start_global = None
         self._current_global = None
         self._selecting = False
@@ -97,12 +93,16 @@ class RegionSelectorDialog(QtWidgets.QDialog):
 
 
 class SnippingToolGUI(QtWidgets.QWidget):
+    # Emitted when user finishes selecting a region: (x, y, w, h)
+    regionChanged = QtCore.pyqtSignal(tuple)
+    # Emitted when user clicks "Take Picture"
+    takePicture = QtCore.pyqtSignal()
     def __init__(self):
         super().__init__()
         self.result = None
 
         self.setWindowTitle("Screen Region Selector")
-        self.setFixedSize(300, 150)
+        self.setFixedSize(400, 250)
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
 
         # Center the window on the primary screen
@@ -130,7 +130,6 @@ class SnippingToolGUI(QtWidgets.QWidget):
         btn_font.setPointSize(10)
         self.select_button.setFont(btn_font)
         self.select_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        # Styling similar to original: blue background, white text (flat)
         self.select_button.setStyleSheet(
             "QPushButton{background:#0078D4;color:white;border:none;padding:10px 20px;}"
             "QPushButton:pressed{background:#106EBE;}"
@@ -138,19 +137,44 @@ class SnippingToolGUI(QtWidgets.QWidget):
         self.select_button.clicked.connect(self.start_selection)
         layout.addWidget(self.select_button, 0, QtCore.Qt.AlignCenter)
 
+        # Take Picture button
+        self.capture_button = QtWidgets.QPushButton("Take Picture")
+        cap_font = self.capture_button.font()
+        cap_font.setPointSize(10)
+        self.capture_button.setFont(cap_font)
+        self.capture_button.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.capture_button.setStyleSheet(
+            "QPushButton{background:#2D7D46;color:white;border:none;padding:10px 20px;}"
+            "QPushButton:pressed{background:#256D3C;}"
+        )
+        self.capture_button.clicked.connect(self._on_take_picture)
+        layout.addWidget(self.capture_button, 0, QtCore.Qt.AlignCenter)
+
         self.setLayout(layout)
 
     def start_selection(self):
         self.hide()
         dlg = RegionSelectorDialog(self)
-        dlg.exec_()  # modal; blocks until accept/reject
+        dlg.exec_()  
         self.result = dlg.result
-        # Close selector window after we have the result so caller can proceed.
-        self.close()
+        # Show this control window again and let the main app continue running.
+        self.show()
+        if self.result is not None:
+            try:
+                self.regionChanged.emit(tuple(self.result))
+            except Exception:
+                pass
 
     def closeEvent(self, event):
-        # If user closes without selecting, leave existing result (likely None)
-        event.accept()
+        # Terminate the entire application when the control window is closed
+        try:
+            QtWidgets.QApplication.quit()
+        finally:
+            event.accept()
+
+    def _on_take_picture(self):
+        # Emit signal. main app will perform the actual capture/translate
+        self.takePicture.emit()
 
 
 def select_region():
@@ -158,7 +182,7 @@ def select_region():
     app = QtWidgets.QApplication.instance()
     if app is None:
         app = QtWidgets.QApplication(sys.argv)
-        # Enable high DPI scaling attributes (helpful on modern displays)
+        # Enable high DPI scaling attributes
         QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
         QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
         app_created_here = True

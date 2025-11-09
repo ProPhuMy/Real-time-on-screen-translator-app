@@ -1,99 +1,111 @@
 import screenshot as sc
 from screenshot import OCR
 import translate as ts
-import gui_pyqt as gui
-from gui_pyqt import select_region
+from gui_pyqt import SnippingToolGUI
 from overlay import TransparentFramelessWindow
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import QTimer
+from PyQt5.QtWidgets import QApplication, QProgressDialog
+from PyQt5 import QtCore
 import sys
 from google import genai
-import keyboard
 
 overlay = None
 reader = None
 client = None
-previous_img = None
 coords = None
-
-def on_hotkey():
-    global coords
-    gui.running = False
-    print("\nCtrl+L pressed. Stopping screenshot monitoring...")
-    print("Opening region selector...")
-
-keyboard.add_hotkey('ctrl+l', on_hotkey)  
+control = None
 
 
-def take_screenshot_and_translate():
-    global overlay, reader, client, previous_img, coords, timer
-    
-    if overlay is None or coords is None:
-        return
-    
-    # Check if user requested region change
-    if not gui.running:
-        timer.stop()
-        handle_region_change()
-        print("bro")
-        if coords is not None:
-            timer.start(2000)
-            QApplication.processEvents()  # Force PyQt event loop to resume after Tkinter interference
-            print(f"ass - timer is active: {timer.isActive()}")
-        print("faf")
-        return
-    
-    
+class CaptureWorker(QtCore.QObject):
+    finished = QtCore.pyqtSignal(object, object)  # (translated, error)
+
+    def __init__(self, coords, reader, client):
+        super().__init__()
+        self.coords = coords
+        self.reader = reader
+        self.client = client
+
+    @QtCore.pyqtSlot()
+    def run(self):
+        try:
+            img = sc.convert_image(sc.take_image(self.coords))
+            result = self.reader.extract_text(img)
+            translated = ts.translate_text(result, self.client) if result else None
+            self.finished.emit(translated, None)
+        except Exception as e:
+            self.finished.emit(None, e)
+
+
+def on_region_changed(new_coords):
+    global overlay, coords
+    coords = new_coords
+    # Recreate overlay for the new region
     try:
-        # Hide overlay before screenshot
+        if overlay is not None:
+            overlay.close()
+            overlay = None
+        if coords is not None:
+            overlay = TransparentFramelessWindow(coords)
+            overlay.show()
+    except Exception as e:
+        print(f"Error creating overlay: {e}")
+
+
+def on_take_picture():
+    global overlay, reader, client, coords, control
+    if coords is None:
+        print("No region selected. Click 'Select Region' first.")
+        return
+
+    # hide overlay to avoid capturing it
+    if overlay is not None:
         overlay.hide()
-        QApplication.processEvents()  # Force Qt to process the hide
-        
-        # Take screenshot
-        print("Taking screenshot...")
-        img2 = sc.convert_image(sc.take_image(coords))
-        
-        # Show overlay again
-        overlay.show()
-        
-        # First screenshot or image has changed
-        if previous_img is None or sc.compare_images(previous_img, img2):
-            result = reader.extract_text(img2)
-            
-            if result is not None and len(result) > 0:
-                translated = ts.translate_text(result, client)
-                
-                if translated is not None and len(translated) > 0:
-                    previous_img = img2
+        QApplication.processEvents()
+
+    # Show dialog
+    progress = QProgressDialog("Processing image...", None, 0, 0, control)
+    progress.setWindowModality(QtCore.Qt.ApplicationModal)
+    progress.setCancelButton(None)
+    progress.setMinimumDuration(0)
+    progress.setAutoClose(False)
+    progress.setAutoReset(False)
+    progress.show()
+
+    # Start background worker
+    thread = QtCore.QThread()
+    worker = CaptureWorker(coords, reader, client)
+    worker.moveToThread(thread)
+
+    def on_finished(translated, error):
+        try:
+            if error:
+                print(f"Error in manual capture: {error}")
+            else:
+                if translated and overlay is not None:
                     overlay.reset_labels()
                     overlay.create_labels(translated)
-                    
-    except Exception as e:
-        print(f"Error in screenshot/translate: {e}")
-        overlay.show()  # Make sure overlay is visible even if error
+        finally:
+            if overlay is not None:
+                overlay.show()
+                QApplication.processEvents()
+            progress.close()
+            worker.deleteLater()
+            thread.quit()
+            thread.wait()
+
+    thread.started.connect(worker.run)
+    worker.finished.connect(on_finished)
+    thread.start()
 
 
-def handle_region_change():
-    global overlay, coords, previous_img
-    
-    if overlay is not None:
-        overlay.close()
-        overlay = None
-    
-    new_coords = select_region()
-    print(new_coords)
-    if new_coords is None:
-        app.quit()
-        return
-    
-    coords = new_coords
-    previous_img = None
-    
-    # Create new overlay
-    overlay = TransparentFramelessWindow(coords)
-    overlay.show()
-
-    gui.running = True
+def _cleanup():
+    """Cleanup resources when app is quitting."""
+    global overlay
+    try:
+        if overlay is not None:
+            overlay.close()
+            overlay = None
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
@@ -101,20 +113,13 @@ if __name__ == "__main__":
     client = genai.Client()
     app = QApplication(sys.argv)
 
-    coords = select_region()
-    if coords is None:
-        sys.exit()
+    # Create control window
+    control = SnippingToolGUI()
+    control.regionChanged.connect(on_region_changed)
+    control.takePicture.connect(on_take_picture)
+    control.show()
 
-    overlay = TransparentFramelessWindow(coords)
-    overlay.show()
+    app.aboutToQuit.connect(_cleanup)
 
-    # Single timer that handles everything
-    global timer
-    timer = QTimer()
-    timer.timeout.connect(take_screenshot_and_translate)
-    timer.start(2000)  # Check every 2 seconds
-    print("wth")
-    
     sys.exit(app.exec_())
-    print("ge")
     
